@@ -18,4 +18,4 @@ The project breakdown:
 5) Permutation testing - INPUT: Repeat steps 2-4 with randomly assigned cell labels. OUTPUT: null distribution transition score for each cell-type and p-value for each transition score.
 
 What could be added next?
-1) optimization algorithms for Delaunay triangulation, grid size and distance penalty in the Hidden Markov Model.
+1) optimization algorithms for parameters in Delaunay triangulation, grid size and distance penalty in the Hidden Markov Model.
