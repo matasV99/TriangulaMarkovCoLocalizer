@@ -1,4 +1,4 @@
-# TriangulaMarkovCoLocalizer (TMC)
+# TriangulaMarkovCoLocalizer (TMCL)
 
 A-star 10-X genomics spatial transcriptomics hackathon.
 
