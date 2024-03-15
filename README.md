@@ -2,7 +2,8 @@
 
 A-star 10-X genomics spatial transcriptomics hackathon.
 
-Dataset: [LINK]
+Paper: https://www.nature.com/articles/s41467-023-43458-x
+Dataset: https://www.10xgenomics.com/products/xenium-in-situ/preview-dataset-human-breast
 
 Approach wikipedia: 
 1. Delaunay triangulation: https://gwlucastrig.github.io/TinfourDocs/DelaunayIntro/index.html
