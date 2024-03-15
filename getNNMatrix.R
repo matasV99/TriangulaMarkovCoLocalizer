@@ -139,7 +139,7 @@ getNNMatrix <- function(
         }
       }
       dists <- Mod(all_coords - all_coords[i])
-      reflab <- c(CLB[i], CLB[i] + max(CLB))
+      reflab <- CLB[i] + c( (1:length(euDists)) - 1) * max(CLB)
       for(j in 1:length(reflab)){
         FM[,reflab[j]] <- FM[,reflab[j]] + (dists < euDists[j])
       }
