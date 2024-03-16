@@ -31,8 +31,11 @@ heDeconvolve <- function(
   imh = imh / max(imh)
   ime = ime / max(ime)
   
+  mask <- (imh==0) + (ime==0)
+  mask <- mask >0
   h <- (imh * log2(imh)) + (ime * log2(ime))
   h = -h
+  h[mask] <- 0
   
   OUT <- list(
     'H' = imh,
