@@ -62,8 +62,10 @@ getNNLatentFactors <- function(
       mask_zeros = mask_zeros,
       diag = diag,
       nonneg = nonneg)
-    h <- nmfd$h
+    cat('Getting cell-wise loadings...')
     w <- nmfd$w
+    cat('Getting feature-wise loadings...')
+    h <- nmfd$h
     colnames(w) <- paste0('NMF', sprintf(paste0('%0', nchar(k), 'd'), 1:k))
     colnames(h) <- colnames(nndf)
     OUT[['CELL_LOADINGS']] <- w
@@ -92,6 +94,7 @@ getNNLatentFactors <- function(
     if(verbose){ cat('\n\nRunning CorEx model...')}
     corextopic <- import('corextopic.corextopic')
     norm <- NNMatrix>0
+    # cat('Building model..')
     model <- corextopic$Corex(
       n_hidden = k, 
       seed = seed,
@@ -99,15 +102,15 @@ getNNLatentFactors <- function(
       count = count,
       tree= tree
     )
+
+    # cat('Fitting model...')
     model$fit(  
       norm, words = colnames(NNMatrix), docs = 1:nrow(norm)
     )
-    model$fit(  
-      norm, words = colnames(NNMatrix), docs = 1:nrow(norm)
-    )
+    cat('Getting cell-wise loadings...')
     w <- list()
-    for(i in 1L:ntopics){
-      cat(paste0(i, ' of ', ntopics, '...'))
+    for(i in 1L:k){
+      # cat(paste0(i, ' of ', k, '...'))
       vals <- unlist(model$get_top_docs(n_docs = nrow(norm), topic = i-1L))
       idx <- as.integer(vals[c(T, F)])
       logprob <- as.numeric(vals[c(F, T)])
@@ -116,7 +119,9 @@ getNNLatentFactors <- function(
       rm(idx, vals, logprob)
     }
     w <- do.call(cbind, w)
+    colnames(w) <- paste0('CX', sprintf(paste0('%0', nchar(k), 'd'), 1:k))
     
+    cat('Getting feature-wise loadings...')
     lfs <- model$get_topics(n_words=ncol(NNMatrix))
     facs <- sapply(1:length(lfs), function(x){
       if(length(lfs[[x]]) == 0){
