@@ -31,15 +31,8 @@ heDeconvolve <- function(
   imh = imh / max(imh)
   ime = ime / max(ime)
   
-  h <- -Reduce('+', lapply(heList, function(x){ 
-    
-    x[x<0] <- 0
-    x <- x / max(x)
-    y <- x * log2(x)
-    y[x==0] <- 0
-    return(y)
-    
-  }))
+  h <- (imh * log2(imh)) + (ime * log2(ime))
+  h = -h
   
   OUT <- list(
     'H' = imh,
