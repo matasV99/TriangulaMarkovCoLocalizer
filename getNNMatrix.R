@@ -40,7 +40,7 @@ getNNMatrix <- function(
   CLB <- as.integer(factor(cell_label))
   OUT <- list()
   all_coords <- x + (y * 1i)
-  idx <- x + (x) * (y-min(y))
+  # idx <- x + max(x) * (y-min(y))
   ###
   
   ###
