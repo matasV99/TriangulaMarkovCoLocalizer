@@ -30,17 +30,18 @@ heDeconvolve <- function(
   ime[ime<0] <- 0
   imh = imh / max(imh)
   ime = ime / max(ime)
-  
-  mask <- (imh==0) + (ime==0)
-  mask <- mask >0
-  h <- (imh * log2(imh)) + (ime * log2(ime))
-  h = -h
-  h[mask] <- 0
+
+  h <- (imh * log2(imh))
+  h[imh==0] <- 0
+  entropy <- h
+  h <- (ime * log2(ime))
+  h[ime==0] <- 0
+  entropy = entropy + h
   
   OUT <- list(
     'H' = imh,
     'E' = ime,
-    'ENTROPY' = h
+    'ENTROPY' = -entropy
   )
   
   return(OUT)
