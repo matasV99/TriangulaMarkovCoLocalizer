@@ -67,7 +67,7 @@ permutationTest <- function(
   
   start_time <- Sys.time()
   l_o <- list()
-  for (c in unique(cell_labels)){
+  for (c in 1:ncol(NNM)){
     NNMatrixVector <- NNM[,c]
     obs <- by(NNMatrixVector, cell_labels, sum)
     obs <- setNames(as.numeric(obs), names(obs))
@@ -110,6 +110,8 @@ permutationTest <- function(
       'PVAL' = pvals,
       'SIG' = c('***', '**', '*', '.', '')[as.integer(cut(pvals, c(1, 0.1, 0.05, 0.01, 0.001, -1)))]
     )
+    OUT$CTA <- names(obs)
+    OUT$CTB <- colnames(NNM)[c]
     l_o[[c]] <- OUT
   }
   combined_df <- do.call("rbind", l_o)
