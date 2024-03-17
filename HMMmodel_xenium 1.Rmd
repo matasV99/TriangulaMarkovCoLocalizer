@@ -1,0 +1,126 @@
+---
+title: "HMM modeling of neighbourhoods using cell-cell colocalization"
+output:
+  html_document:
+    df_print: paged
+---
+
+This notebook pulls up cell coordinates, cell type labels and processed gene expression data to build cell-cell enrichment, create pseudo-neighbourhoods by griding xenium FOV, estimating likely num of neighborhoods and modelling it using hidden Markov model. 
+
+```{r}
+source("HMM_helper_D1.R")
+```
+
+
+Load filtered cell ID and normalized cell x gene data
+```{r}
+cellID_filter <- fread("cellID_data.csv") %>% as.data.frame()
+genecell_mat <- readRDS("scaled_genesxcells.rds")
+```
+
+
+Load relevant data - add filtering out of poor quality cells from giotto pipeline 
+```{r}
+annot <- fread("cell_annot.csv") %>% dplyr::filter(Cluster != "Unlabeled") %>% 
+            dplyr::filter(Barcode %in% cellID_filter$cell_ID)
+coords <- fread("cells.csv") %>% dplyr::filter(cell_id %in% annot$Barcode)
+```
+
+
+Compute NN matrix (start with just first degree) and grids across FOVs
+```{r}
+NN_mat <- getNNMatrix(coords$x_centroid, coords$y_centroid, annot$Cluster, delaunayTriangulation = T, delaunayTriangulationDistanceThreshold = 20, delaunayNNDegrees = c(1)) %>% as.data.frame()
+NN_mat$cell_id <- coords$cell_id
+grid_cell <- getGridCell(coords$x_centroid, coords$y_centroid, annot$Cluster, g_n = 100) %>% droplevels()
+grid_cell$cell_id <- coords$cell_id
+
+grid_num <- grid_cell %>% group_by(gridGroup) %>% summarize(n=n())
+filter_grid <- grid_num %>% dplyr::filter(n < 2)
+
+grid_cell <- grid_cell %>% filter(!gridGroup %in% filter_grid$gridGroup) %>% droplevels()
+NN_mat <- dplyr::filter(NN_mat, cell_id %in% grid_cell$cell_id)
+grid_NN <- left_join(grid_cell, NN_mat, by = "cell_id") %>% dplyr::select(-cell_id) %>% split(., .$gridGroup)
+```
+
+
+Compute emission probabilities per grid (cell-type probabilities) 
+```{r}
+celltype_vec <- unique(annot$Cluster)
+grid_emission <- lapply(grid_NN, getCelltypeProbs, celltype_vec = celltype_vec)
+```
+
+
+Compute emission probabilities between putative hidden states 
+```{r}
+colnames(genecell_mat) <- cellID_filter$cell_ID
+genecell_data <- t(as.matrix(genecell_mat)[, as.character(grid_cell$cell_id)])
+
+# Run PCA
+pca <- prcomp(genecell_data, rank. = 3)
+grid_genecell <- cbind(grid_cell, as.data.frame(pca$x)) %>% split(., .$gridGroup)
+
+# grid_ks <- calc_ks_dist4(grid_genecell) 
+# grid_ks[is.na(grid_ks)] <- 0
+
+# calc px dist between centroid of all cell coords in grid, across grids 
+grid_dist <- calc_px_dist(grid_genecell)
+
+# weight cell state dist by inverse px dist 
+# grid_transition <- grid_ks * grid_dist
+# grid_transition_norm <- apply(grid_transition, 1, rescale, to=c(1,0))
+```
+
+
+Inputs for HMM model 
+```{r}
+m <- 2 # num of hidden states 
+n_dep <- 19
+
+q_emiss <- c(8, 9, 7, 10, 10, 9, 10, 5, 5, 8, 4, 3, 9, 9, 6, 7, 10, 3, 4) # categories per feature (neighbor cell type)
+
+NN_data <- cbind(grid_cell, NN_mat)
+levels(NN_data$gridGroup) <- c(1:length(levels(NN_data$gridGroup)))
+NN_input <- cbind(id= as.numeric(NN_data$gridGroup), NN_data[c(6:24)])
+```
+
+
+Starting priors
+```{r}
+start_TM <- diag(.8, m) # transition matrix
+start_TM[lower.tri(start_TM) | upper.tri(start_TM)] <- .2
+
+start_EM <- vector("list", length(q_emiss)) #emission matrix
+
+# Create each matrix based on q_emiss[i]
+for (i in 1:length(q_emiss)) {
+  # Generate a random matrix (you can adjust the values as needed)
+  mat <- matrix(runif(m*q_emiss[i]), nrow = m, ncol = q_emiss[i])
+  start_EM[[i]] <- mat
+}
+```
+
+
+Set up HMM model 
+```{r}
+out <- mHMM(s_data = as.matrix(NN_input+1), data_distr='categorical', 
+                    gen = list(m =2, n_dep = n_dep, q_emiss = q_emiss), 
+                    start_val = c(list(start_TM), start_EM),
+                    mcmc = list(J = 5, burn_in = 2))
+```
+
+
+Summary of model with average log likelihood and AIC values 
+```{r}
+print(out)
+summary(out)
+```
+
+
+Plot emssion probs for each feature (neighbor cell type) in each output state (neighbourhood)
+```{r}
+plot(out, component = "emiss", dep = 1) # change dep to select different cell types 
+```
+
+
+Future work: To run models with increasing values of hidden states (or choose from silouette score of kmeans clustering) and compare AIC values
+
